@@ -21,8 +21,13 @@ public class RailwayDatabaseEnvironmentPostProcessor implements EnvironmentPostP
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
 		String raw = environment.getProperty("DATABASE_URL");
 		if (raw == null || raw.isBlank()) {
+			if (isRailway(environment) && isBlank(environment.getProperty("PGHOST"))) {
+				throw new IllegalStateException(
+						"Set DATABASE_URL=${{Postgres.DATABASE_URL}} on the wardrobe_backend service");
+			}
 			return;
 		}
+		raw = raw.trim();
 
 		Map<String, Object> mapped = new HashMap<>();
 		if (raw.startsWith("jdbc:")) {
@@ -87,6 +92,14 @@ public class RailwayDatabaseEnvironmentPostProcessor implements EnvironmentPostP
 		if (!password.isEmpty()) {
 			mapped.put("spring.datasource.password", password);
 		}
+	}
+
+	private static boolean isRailway(ConfigurableEnvironment environment) {
+		return !isBlank(environment.getProperty("RAILWAY_PROJECT_ID"));
+	}
+
+	private static boolean isBlank(String value) {
+		return value == null || value.isBlank();
 	}
 
 	private static String decode(String value) {
