@@ -1,10 +1,12 @@
 package com.boutique.security;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -36,7 +38,7 @@ public class SecurityConfig {
 		http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
 		http.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/register", "/api/auth/login").permitAll()
+				.requestMatchers("/api/register", "/api/auth/login", "/api/health").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
 				.requestMatchers("/api/admin/**").hasRole("ADMIN")
 				.anyRequest().authenticated());
@@ -56,11 +58,16 @@ public class SecurityConfig {
 		res.getWriter().write("{\"error\":\"" + message + "\"}");
 	}
 
-	/** The pages are served by Live Server on another port, so that port must be allowed. */
+	/** Browser origins that may call this API. Override cors.allowed-origins on Railway. */
 	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
+	public CorsConfigurationSource corsConfigurationSource(
+			@Value("${cors.allowed-origins}") String allowedOrigins) {
 		CorsConfiguration cors = new CorsConfiguration();
-		cors.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+		List<String> origins = Arrays.stream(allowedOrigins.split(","))
+				.map(String::trim)
+				.filter(origin -> !origin.isEmpty())
+				.toList();
+		cors.setAllowedOriginPatterns(origins);
 		cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		cors.setAllowedHeaders(List.of("*"));
 		cors.setAllowPrivateNetwork(true);
